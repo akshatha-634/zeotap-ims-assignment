@@ -100,10 +100,36 @@ Before closing an incident, the responder must fill:
 - System won't crash if persistence layer is slow
 - Throughput metrics exposed every 5 seconds
 
+
 ### 5. Observability
 - /health endpoint for liveness checks
 - Throughput metrics (signals/sec) on dashboard
 - Raw signal audit log retained
+
+### 6. MTTR Calculation
+Mean Time To Repair is automatically calculated based on:
+- **start_time** — timestamp of first signal received
+- **end_time** — timestamp of RCA submission
+- MTTR = end_time - start_time
+
+### 7. Alerting Strategy
+Different component failures trigger different alert priorities:
+- **P0** — Critical (RDBMS failure, MCP Host down) → Immediate response required
+- **P1** — High (Cache failure) → Response within 30 minutes
+- **P2** — Medium (API Gateway errors) → Response within 2 hours
+
+In production, P0 alerts would trigger PagerDuty/OpsGenie calls, P1 would send Slack notifications, P2 would create tickets.
+
+### 8. Scaling to 10,000 signals/sec
+Current implementation uses in-memory buffering which:
+- Handles burst traffic without crashing ✅
+- Won't fail if persistence layer is slow ✅
+
+In production this would be replaced with:
+- **Apache Kafka** as message queue for true 10,000 signals/sec
+- **Redis Streams** as lighter alternative
+- **MongoDB indexing** on component_id and timestamp for efficient querying
+- **Time-series collections** in MongoDB for signal aggregations
 
 ## 🧪 Sample Test Data
 
